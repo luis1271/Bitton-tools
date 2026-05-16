@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BitTON.AI — Migration Calculator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; display: flex; justify-content: center; padding: 2rem 1rem; }
+.calc-wrap { width: 100%; max-width: 680px; }
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+.logo { background: #1a6fe8; color: #fff; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 8px; }
+.title { font-size: 20px; font-weight: 500; color: #1a1a1a; }
+.input-section { background: #eeeeee; border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
+.input-label { font-size: 13px; color: #666; margin-bottom: 8px; }
+.input-row { display: flex; align-items: center; gap: 12px; }
+.input-row input { flex: 1; font-size: 22px; font-weight: 500; border: 1px solid #ccc; border-radius: 8px; padding: 10px 14px; background: #fff; color: #1a1a1a; outline: none; }
+.input-row input:focus { border-color: #1a6fe8; }
+.input-row .unit { font-size: 15px; color: #666; font-weight: 500; }
+.step-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+.step-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem; }
+.step-num { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+.step-num.blue { background: #e6f1fb; color: #185fa5; }
+.step-num.purple { background: #eeedfe; color: #534ab7; }
+.step-num.green { background: #eaf3de; color: #3b6d11; }
+.step-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.step-value { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+.step-sub { font-size: 12px; color: #888; margin-top: 3px; }
+.dist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+.dist-card { border-radius: 12px; padding: 1rem; }
+.dist-card.max360 { background: #e6f1fb; border: 1px solid #b5d4f4; }
+.dist-card.validator { background: #eaf3de; border: 1px solid #c0dd97; }
+.dist-pct { font-size: 28px; font-weight: 500; }
+.dist-card.max360 .dist-pct { color: #185fa5; }
+.dist-card.validator .dist-pct { color: #3b6d11; }
+.dist-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.dist-card.max360 .dist-name { color: #0c447c; }
+.dist-card.validator .dist-name { color: #27500a; }
+.dist-btn { display: inline-block; margin-top: 6px; font-size: 11px; padding: 3px 10px; border-radius: 4px; color: #fff; }
+.dist-card.max360 .dist-btn { background: #185fa5; }
+.dist-card.validator .dist-btn { background: #3b6d11; }
+.vault-section { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+.vault-title { font-size: 13px; font-weight: 500; color: #1a1a1a; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.vault-title .badge { background: #faeeda; color: #854f0b; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+.vault-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+.vault-item { border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px; text-align: center; background: #fafafa; }
+.vault-item.needed { border: 2px solid #185fa5; background: #e6f1fb; }
+.vault-price { font-size: 16px; font-weight: 500; color: #1a1a1a; }
+.vault-item.needed .vault-price { color: #185fa5; }
+.vault-cap { font-size: 11px; color: #888; }
+.vault-name { font-size: 11px; color: #888; margin-top: 2px; }
+.vault-rec { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
+.staking-section { background: #f5f5f5; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+.staking-title { font-size: 13px; color: #888; margin-bottom: 10px; }
+.staking-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.staking-item { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 10px; }
+.staking-item-label { font-size: 11px; color: #888; margin-bottom: 3px; }
+.staking-item-value { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.disclaimer { font-size: 11px; color: #999; padding-top: 8px; border-top: 1px solid #eee; line-height: 1.6; }
+.zero-state { text-align: center; padding: 2rem; color: #999; font-size: 14px; }
+.footer { text-align: center; font-size: 11px; color: #bbb; margin-top: 1rem; }
+@media (max-width: 480px) {
+  .step-grid { grid-template-columns: 1fr; }
+  .dist-grid { grid-template-columns: 1fr; }
+  .vault-grid { grid-template-columns: repeat(2, 1fr); }
+  .staking-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="calc-wrap">
+  <div class="header">
+    <span class="logo">BitTON.AI</span>
+    <span class="title">Migration calculator</span>
+  </div>
+
+  <div class="input-section">
+    <div class="input-label">Enter your original BTN balance (from Telegram Mini App)</div>
+    <div class="input-row">
+      <input type="number" id="btnInput" placeholder="e.g. 10000" min="0" oninput="calculate()" />
+      <span class="unit">BTN</span>
+    </div>
+  </div>
+
+  <div id="results" style="display:none;">
+    <div class="step-grid">
+      <div class="step-card">
+        <div class="step-num blue">1</div>
+        <div class="step-label">Original balance</div>
+        <div class="step-value" id="r-original">—</div>
+        <div class="step-sub">BTN (pre-compression)</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num purple">2</div>
+        <div class="step-label">After compression ÷ 5.0625</div>
+        <div class="step-value" id="r-compressed">—</div>
+        <div class="step-sub" id="r-usd">USD value preserved</div>
+      </div>
+      <div class="step-card">
+        <div class="step-num green">3</div>
+        <div class="step-label">Vault required (30% portion)</div>
+        <div class="step-value" id="r-vault-need">—</div>
+        <div class="step-sub">BTN capacity needed</div>
+      </div>
+    </div>
+
+    <div class="dist-grid">
+      <div class="dist-card max360">
+        <div class="dist-pct">30%</div>
+        <div class="dist-name">Max 360 staking</div>
+        <div style="font-size:20px; font-weight:500; color:#0c447c;" id="r-max360">—</div>
+        <div style="font-size:12px; color:#185fa5; margin-top:3px;">Auto-allocated</div>
+        <span class="dist-btn">0.69% daily · 360 days · BTN rewards</span>
+      </div>
+      <div class="dist-card validator">
+        <div class="dist-pct">70%</div>
+        <div class="dist-name">Validator pool</div>
+        <div style="font-size:20px; font-weight:500; color:#27500a;" id="r-validator">—</div>
+        <div style="font-size:12px; color:#3b6d11; margin-top:3px;">No vault needed</div>
+        <span class="dist-btn">Become validator or delegate</span>
+      </div>
+    </div>
+
+    <div class="vault-section">
+      <div class="vault-title">
+        &#128274; Vault requirement
+        <span class="badge">Mandatory step</span>
+      </div>
+      <div class="vault-grid">
+        <div class="vault-item" id="v-bronze">
+          <div class="vault-price">$25</div>
+          <div class="vault-cap">250 BTN</div>
+          <div class="vault-name">Basic</div>
+        </div>
+        <div class="vault-item" id="v-silver">
+          <div class="vault-price">$50</div>
+          <div class="vault-cap">500 BTN</div>
+          <div class="vault-name">Silver</div>
+        </div>
+        <div class="vault-item" id="v-gold">
+          <div class="vault-price">$75</div>
+          <div class="vault-cap">750 BTN</div>
+          <div class="vault-name">Gold</div>
+        </div>
+        <div class="vault-item" id="v-diamond">
+          <div class="vault-price">$100</div>
+          <div class="vault-cap">1,000 BTN</div>
+          <div class="vault-name">Diamond</div>
+        </div>
+      </div>
+      <div class="vault-rec" id="r-vault-rec">—</div>
+    </div>
+
+    <div class="staking-section">
+      <div class="staking-title">Max 360 staking details</div>
+      <div class="staking-grid">
+        <div class="staking-item"><div class="staking-item-label">Duration</div><div class="staking-item-value">360 days</div></div>
+        <div class="staking-item"><div class="staking-item-label">Daily yield</div><div class="staking-item-value">~0.69%</div></div>
+        <div class="staking-item"><div class="staking-item-label">Total rewards</div><div class="staking-item-value">up to 250%</div></div>
+        <div class="staking-item"><div class="staking-item-label">Liquid (BTN)</div><div class="staking-item-value">15% — weekly</div></div>
+        <div class="staking-item"><div class="staking-item-label">Vested (BTN)</div><div class="staking-item-value">85% — 180d freeze</div></div>
+        <div class="staking-item"><div class="staking-item-label">Withdrawals</div><div class="staking-item-value">Thursdays UTC</div></div>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      All figures are estimates. USD value based on $11.39/BTN reference price. Cryptocurrency investments carry market risk. Vaults can be combined to reach required capacity. The 70% Validator Pool does not require any Vault capacity.
+    </div>
+  </div>
+
+  <div id="zero-state" class="zero-state">
+    Enter your BTN balance above to see your migration breakdown.
+  </div>
+
+  <div class="footer">web-app.bitton.ai/migration &nbsp;|&nbsp; Always verify links through official channels</div>
+</div>
+
+<script>
+function calculate() {
+  var raw = parseFloat(document.getElementById('btnInput').value);
+  var results = document.getElementById('results');
+  var zeroState = document.getElementById('zero-state');
+  if (!raw || raw <= 0) { results.style.display='none'; zeroState.style.display='block'; return; }
+  results.style.display='block'; zeroState.style.display='none';
+  var compressed = raw / 5.0625;
+  var usd = compressed * 11.39;
+  var max360 = compressed * 0.30;
+  var validator = compressed * 0.70;
+  var vaultNeed = max360;
+  document.getElementById('r-original').textContent = Math.round(raw).toLocaleString() + ' BTN';
+  document.getElementById('r-compressed').textContent = compressed.toFixed(2) + ' BTN';
+  document.getElementById('r-usd').textContent = '~$' + usd.toLocaleString('en-US', {maximumFractionDigits:0}) + ' USD preserved';
+  document.getElementById('r-max360').textContent = '~' + max360.toFixed(2) + ' BTN';
+  document.getElementById('r-validator').textContent = '~' + validator.toFixed(2) + ' BTN';
+  document.getElementById('r-vault-need').textContent = vaultNeed.toFixed(2) + ' BTN';
+  ['v-bronze','v-silver','v-gold','v-diamond'].forEach(function(id){ document.getElementById(id).classList.remove('needed'); });
+  var rec = '';
+  if (vaultNeed <= 250) { document.getElementById('v-bronze').classList.add('needed'); rec = '<strong>1 Basic Vault ($25)</strong> — 250 BTN capacity is sufficient.'; }
+  else if (vaultNeed <= 500) { document.getElementById('v-silver').classList.add('needed'); rec = '<strong>1 Silver Vault ($50)</strong> — 500 BTN capacity is sufficient.'; }
+  else if (vaultNeed <= 750) { document.getElementById('v-gold').classList.add('needed'); rec = '<strong>1 Gold Vault ($75)</strong> — 750 BTN capacity is sufficient.'; }
+  else if (vaultNeed <= 1000) { document.getElementById('v-diamond').classList.add('needed'); rec = '<strong>1 Diamond Vault ($100)</strong> — 1,000 BTN capacity is sufficient.'; }
+  else { document.getElementById('v-diamond').classList.add('needed'); var d = Math.ceil(vaultNeed/1000); rec = '<strong>' + d + ' x Diamond Vault ($' + (d*100) + ' total)</strong> — ' + (d*1000).toLocaleString() + ' BTN capacity. Vaults can be combined.'; }
+  document.getElementById('r-vault-rec').innerHTML = 'Recommended: ' + rec;
+}
+</script>
+</body>
+</html>
