@@ -127,26 +127,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <span class="badge">Mandatory step</span>
       </div>
       <div class="vault-grid">
-        <div class="vault-item" id="v-bronze">
-          <div class="vault-price">$25</div>
-          <div class="vault-cap">250 BTN</div>
-          <div class="vault-name">Basic</div>
-        </div>
-        <div class="vault-item" id="v-silver">
-          <div class="vault-price">$50</div>
-          <div class="vault-cap">500 BTN</div>
-          <div class="vault-name">Silver</div>
-        </div>
-        <div class="vault-item" id="v-gold">
-          <div class="vault-price">$75</div>
-          <div class="vault-cap">750 BTN</div>
-          <div class="vault-name">Gold</div>
-        </div>
-        <div class="vault-item" id="v-diamond">
-          <div class="vault-price">$100</div>
-          <div class="vault-cap">1,000 BTN</div>
-          <div class="vault-name">Diamond</div>
-        </div>
+        <div class="vault-item" id="v-bronze"><div class="vault-price">$25</div><div class="vault-cap">250 BTN</div><div class="vault-name">Basic</div></div>
+        <div class="vault-item" id="v-silver"><div class="vault-price">$50</div><div class="vault-cap">500 BTN</div><div class="vault-name">Silver</div></div>
+        <div class="vault-item" id="v-gold"><div class="vault-price">$75</div><div class="vault-cap">750 BTN</div><div class="vault-name">Gold</div></div>
+        <div class="vault-item" id="v-diamond"><div class="vault-price">$100</div><div class="vault-cap">1,000 BTN</div><div class="vault-name">Diamond</div></div>
       </div>
       <div class="vault-rec" id="r-vault-rec">—</div>
     </div>
@@ -168,38 +152,76 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
   </div>
 
-  <div id="zero-state" class="zero-state">
-    Enter your BTN balance above to see your migration breakdown.
-  </div>
-
+  <div id="zero-state" class="zero-state">Enter your BTN balance above to see your migration breakdown.</div>
   <div class="footer">web-app.bitton.ai/migration &nbsp;|&nbsp; Always verify links through official channels</div>
 </div>
 
 <script>
+var tiers = [
+  { id: 'v-diamond', cap: 1000, price: 100, name: 'Diamond' },
+  { id: 'v-gold',    cap: 750,  price: 75,  name: 'Gold' },
+  { id: 'v-silver',  cap: 500,  price: 50,  name: 'Silver' },
+  { id: 'v-bronze',  cap: 250,  price: 25,  name: 'Basic' }
+];
+
+function bestCombination(needed) {
+  var best = null;
+  // Try all combinations of up to 8 vaults (covers very large balances)
+  for (var d = 0; d <= 8; d++) {
+    for (var g = 0; g <= 4; g++) {
+      for (var s = 0; s <= 4; s++) {
+        for (var b = 0; b <= 4; b++) {
+          var cap   = d*1000 + g*750 + s*500 + b*250;
+          var cost  = d*100  + g*75  + s*50  + b*25;
+          var count = d + g + s + b;
+          if (cap >= needed && count > 0) {
+            if (!best || cost < best.cost || (cost === best.cost && count < best.count)) {
+              best = { d:d, g:g, s:s, b:b, cap:cap, cost:cost, count:count };
+            }
+          }
+        }
+      }
+    }
+  }
+  return best;
+}
+
 function calculate() {
   var raw = parseFloat(document.getElementById('btnInput').value);
   var results = document.getElementById('results');
   var zeroState = document.getElementById('zero-state');
   if (!raw || raw <= 0) { results.style.display='none'; zeroState.style.display='block'; return; }
   results.style.display='block'; zeroState.style.display='none';
+
   var compressed = raw / 5.0625;
   var usd = compressed * 11.39;
   var max360 = compressed * 0.30;
   var validator = compressed * 0.70;
   var vaultNeed = max360;
-  document.getElementById('r-original').textContent = Math.round(raw).toLocaleString() + ' BTN';
+
+  document.getElementById('r-original').textContent  = Math.round(raw).toLocaleString() + ' BTN';
   document.getElementById('r-compressed').textContent = compressed.toFixed(2) + ' BTN';
-  document.getElementById('r-usd').textContent = '~$' + usd.toLocaleString('en-US', {maximumFractionDigits:0}) + ' USD preserved';
-  document.getElementById('r-max360').textContent = '~' + max360.toFixed(2) + ' BTN';
-  document.getElementById('r-validator').textContent = '~' + validator.toFixed(2) + ' BTN';
+  document.getElementById('r-usd').textContent        = '~$' + usd.toLocaleString('en-US',{maximumFractionDigits:0}) + ' USD preserved';
+  document.getElementById('r-max360').textContent     = '~' + max360.toFixed(2) + ' BTN';
+  document.getElementById('r-validator').textContent  = '~' + validator.toFixed(2) + ' BTN';
   document.getElementById('r-vault-need').textContent = vaultNeed.toFixed(2) + ' BTN';
-  ['v-bronze','v-silver','v-gold','v-diamond'].forEach(function(id){ document.getElementById(id).classList.remove('needed'); });
-  var rec = '';
-  if (vaultNeed <= 250) { document.getElementById('v-bronze').classList.add('needed'); rec = '<strong>1 Basic Vault ($25)</strong> — 250 BTN capacity is sufficient.'; }
-  else if (vaultNeed <= 500) { document.getElementById('v-silver').classList.add('needed'); rec = '<strong>1 Silver Vault ($50)</strong> — 500 BTN capacity is sufficient.'; }
-  else if (vaultNeed <= 750) { document.getElementById('v-gold').classList.add('needed'); rec = '<strong>1 Gold Vault ($75)</strong> — 750 BTN capacity is sufficient.'; }
-  else if (vaultNeed <= 1000) { document.getElementById('v-diamond').classList.add('needed'); rec = '<strong>1 Diamond Vault ($100)</strong> — 1,000 BTN capacity is sufficient.'; }
-  else { document.getElementById('v-diamond').classList.add('needed'); var d = Math.ceil(vaultNeed/1000); rec = '<strong>' + d + ' x Diamond Vault ($' + (d*100) + ' total)</strong> — ' + (d*1000).toLocaleString() + ' BTN capacity. Vaults can be combined.'; }
+
+  // Reset highlights
+  tiers.forEach(function(t){ document.getElementById(t.id).classList.remove('needed'); });
+
+  var combo = bestCombination(vaultNeed);
+  var parts = [];
+  var usedTierIds = [];
+  if (combo.d > 0) { parts.push(combo.d + ' x Diamond ($' + (combo.d*100) + ')'); usedTierIds.push('v-diamond'); }
+  if (combo.g > 0) { parts.push(combo.g + ' x Gold ($'    + (combo.g*75)  + ')'); usedTierIds.push('v-gold'); }
+  if (combo.s > 0) { parts.push(combo.s + ' x Silver ($'  + (combo.s*50)  + ')'); usedTierIds.push('v-silver'); }
+  if (combo.b > 0) { parts.push(combo.b + ' x Basic ($'   + (combo.b*25)  + ')'); usedTierIds.push('v-bronze'); }
+
+  usedTierIds.forEach(function(id){ document.getElementById(id).classList.add('needed'); });
+
+  var rec = '<strong>' + parts.join(' + ') + '</strong> = ' +
+            combo.cap.toLocaleString() + ' BTN capacity — covers your ' +
+            vaultNeed.toFixed(0) + ' BTN requirement. Total cost: $' + combo.cost + '.';
   document.getElementById('r-vault-rec').innerHTML = 'Recommended: ' + rec;
 }
 </script>
