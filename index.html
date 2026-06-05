@@ -122,9 +122,9 @@
       <code>BTN token: 0x6C417845fACc97ebCE84FBfEE9A7460b0E5cfCf3</code>
     </div>
     <div class="key-row">
-      <input id="api-key" type="text" placeholder="Basescan API key — free at basescan.org/register" spellcheck="false"/>
+      <input id="api-key" type="text" placeholder="Etherscan API key (works on Base) — etherscan.io/myapikey" spellcheck="false"/>
       <button class="btn btn-sm btn-outline" onclick="saveKey()">Save key</button>
-      <a class="btn btn-sm btn-outline" href="https://basescan.org/register" target="_blank" style="text-decoration:none;display:flex;align-items:center">Get free key ↗</a>
+      <a class="btn btn-sm btn-outline" href="https://etherscan.io/myapikey" target="_blank" style="text-decoration:none;display:flex;align-items:center">Get free key ↗</a>
     </div>
   </div>
 
@@ -264,7 +264,7 @@ async function analyze(){
     showAlert('Please enter a valid 0x wallet address.','err'); return;
   }
   if(!apiKey){
-    showAlert('Please enter and save your Basescan API key first (free at basescan.org/register).','err'); return;
+    showAlert('Please enter and save your Etherscan API key first (etherscan.io/myapikey).','err'); return;
   }
 
   showAlert('');
@@ -273,7 +273,7 @@ async function analyze(){
   displayedCount = PAGE_SIZE;
 
   try {
-    const url = `https://api.basescan.org/api?module=account&action=tokentx`
+    const url = `https://api.etherscan.io/v2/api?chainid=8453&module=account&action=tokentx`
       +`&contractaddress=${BTN_CONTRACT}`
       +`&address=${wallet}`
       +`&sort=desc`
