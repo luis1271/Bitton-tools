@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTN Pool Analyzer v2 — BitTON.AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #22d3ee;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  header {
+    max-width: 1200px;
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+
+  .logo {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 20px; color: #fff;
+    flex-shrink: 0;
+  }
+
+  header h1 { font-size: 20px; font-weight: 600; }
+  header p  { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  .main { max-width: 1200px; margin: 0 auto; }
+
+  /* ---- Config card ---- */
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .config-card h2 {
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px;
+  }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media(max-width:600px){ .fields{ grid-template-columns:1fr; } }
+  .field label {
+    display: block; font-size: 11px; color: var(--muted);
+    margin-bottom: 5px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 12px; color: var(--text);
+    font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field.full { grid-column: 1/-1; }
+
+  .actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+
+  button {
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: var(--sans); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s; display:flex; align-items:center; gap:7px;
+  }
+  .btn-primary { background: var(--accent); color:#fff; }
+  .btn-primary:hover { background:#2563eb; }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-export {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-export:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-export:disabled { opacity:.4; cursor:not-allowed; }
+
+  /* ---- Stats ---- */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(5,1fr); gap:12px; margin-bottom:20px;
+  }
+  @media(max-width:800px){ .stats-row{ grid-template-columns:repeat(2,1fr); } }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .stat-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .stat-value { font-size:20px; font-weight:700; font-family:var(--mono); }
+  .green  { color: var(--green); }
+  .red    { color: var(--red); }
+  .blue   { color: var(--accent2); }
+  .accent { color: var(--accent); }
+  .stat-sub { font-size:11px; color:var(--muted); margin-top:3px; font-family:var(--mono); }
+
+  /* ---- Filter row ---- */
+  .filter-row {
+    display:flex; gap:10px; padding:12px 14px;
+    background:var(--surface2); border-bottom:1px solid var(--border);
+    flex-wrap:wrap; align-items:center;
+  }
+  .filter-row input {
+    flex:1; min-width:200px; background:var(--surface);
+    border:1px solid var(--border); border-radius:8px; padding:8px 12px;
+    color:var(--text); font-size:13px; outline:none; font-family:var(--mono);
+  }
+  .filter-row input:focus { border-color:var(--accent); }
+  .filter-btn {
+    padding:7px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface); color:var(--muted); font-size:12px; font-weight:600;
+    cursor:pointer; transition:all .2s; white-space:nowrap;
+  }
+  .filter-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* ---- Table ---- */
+  .table-wrap {
+    background: var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;
+  }
+  .table-header {
+    padding:14px 18px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  .table-header h3 { font-size:14px; font-weight:600; }
+  .count-badge {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:6px; padding:3px 10px; font-size:12px; color:var(--muted); font-family:var(--mono);
+  }
+
+  table { width:100%; border-collapse:collapse; }
+  thead th {
+    padding:10px 14px; text-align:left; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.06em; font-weight:600;
+    background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  td { padding:10px 14px; font-size:12px; font-family:var(--mono); white-space:nowrap; }
+
+  .badge {
+    display:inline-block; padding:3px 8px; border-radius:5px;
+    font-size:11px; font-weight:700; letter-spacing:.04em;
+  }
+  .badge-buy  { background:rgba(16,185,129,.15); color:var(--green); }
+  .badge-sell { background:rgba(239,68,68,.15);  color:var(--red); }
+
+  .wallet-link { color:var(--accent2); text-decoration:none; }
+  .wallet-link:hover { text-decoration:underline; }
+  .tx-link { color:var(--muted); text-decoration:none; font-size:11px; }
+  .tx-link:hover { color:var(--accent); }
+
+  .status-bar {
+    padding:12px 18px; font-size:12px; color:var(--muted);
+    background:var(--surface2); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px; font-family:var(--mono); min-height:40px;
+  }
+  .spinner {
+    width:14px; height:14px; border:2px solid var(--border);
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin .8s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin { to{ transform:rotate(360deg); } }
+
+  .progress-bar { height:2px; background:var(--border); position:relative; overflow:hidden; }
+  .progress-fill {
+    height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); transition:width .3s;
+  }
+
+  .empty-state { padding:48px; text-align:center; color:var(--muted); font-size:14px; }
+  .empty-state .icon { font-size:36px; margin-bottom:12px; opacity:.4; }
+
+  .note { font-size:11px; color:var(--muted); margin-top:8px; font-family:var(--mono); }
+
+  /* Buyers tab */
+  .tabs { display:flex; gap:4px; margin-bottom:20px; }
+  .tab-btn {
+    padding:9px 18px; border-radius:8px; border:1px solid var(--border);
+    background:var(--surface); color:var(--muted); font-size:13px; font-weight:600;
+    cursor:pointer; transition:all .2s;
+  }
+  .tab-btn.active { background:var(--surface2); color:var(--text); border-color:var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">B</div>
+  <div>
+    <h1>BTN Pool Analyzer</h1>
+    <p>Uniswap V4 — Base Network — The Graph</p>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Config -->
+  <div class="config-card">
+    <h2>Configuration</h2>
+    <div class="fields">
+      <div class="field full">
+        <label>Pool ID (Uniswap V4)</label>
+        <input type="text" id="poolId" value="0x97be6ed9a14c79c1b77862f0522e4103a8ded89576b76b0da7f0ce1e0ea106d9">
+      </div>
+      <div class="field">
+        <label>From Date (inclusive)</label>
+        <input type="date" id="fromDate" value="2024-02-09">
+      </div>
+      <div class="field">
+        <label>The Graph API Key</label>
+        <input type="text" id="apiKey" value="ceafafc4db984fe309e82e46ee74f609" placeholder="your-api-key">
+      </div>
+    </div>
+    <p class="note">* Subgraph: Uniswap V4 Base (HNCFA9TyBqpo5qpe6QreQABAA1kV8g46mhkCcicu6v2R)</p>
+    <div class="actions">
+      <button class="btn-primary" id="fetchBtn" onclick="fetchAll()">&#9654; Fetch Swaps</button>
+      <button class="btn-export" id="exportAll"  onclick="exportCSV('all')"     disabled>&#8595; Export All CSV</button>
+      <button class="btn-export" id="exportBuys" onclick="exportCSV('buy')"     disabled>&#8595; Buyers CSV</button>
+      <button class="btn-export" id="exportUniq" onclick="exportUniqueBuyers()" disabled>&#8595; Unique Buyers CSV</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat-card">
+      <div class="stat-label">Total Swaps</div>
+      <div class="stat-value accent" id="stTotal">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">BTN Buys</div>
+      <div class="stat-value green" id="stBuys">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">BTN Sells</div>
+      <div class="stat-value red" id="stSells">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique Buyers</div>
+      <div class="stat-value blue" id="stUniqBuyers">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total BTN Bought</div>
+      <div class="stat-value green" id="stBtnVol">—</div>
+      <div class="stat-sub" id="stUsdtVol"></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tabSwaps"  onclick="showTab('swaps')">All Swaps</button>
+    <button class="tab-btn"        id="tabBuyers" onclick="showTab('buyers')">Unique Buyers</button>
+  </div>
+
+  <!-- Swaps table -->
+  <div id="viewSwaps">
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Swap Transactions</h3>
+        <span class="count-badge" id="rowCount">0 rows</span>
+      </div>
+      <div class="status-bar" id="statusBar">Ready — configure and click Fetch Swaps</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="filter-row">
+        <input type="text" id="searchInput" placeholder="Filter by wallet or tx hash..." oninput="applyFilter()">
+        <button class="filter-btn active" id="fAll"  onclick="setFilter('all')">All</button>
+        <button class="filter-btn"        id="fBuy"  onclick="setFilter('buy')">Buys</button>
+        <button class="filter-btn"        id="fSell" onclick="setFilter('sell')">Sells</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date (UTC)</th>
+              <th>Type</th>
+              <th>Wallet</th>
+              <th>BTN Amount</th>
+              <th>USDT Amount</th>
+              <th>Price (USDT/BTN)</th>
+              <th>Tx Hash</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="8"><div class="empty-state"><div class="icon">⬡</div>No data yet</div></td></tr>
+          </tbody>
+          <tfoot id="tableFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unique Buyers table -->
+  <div id="viewBuyers" style="display:none">
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Unique BTN Buyers</h3>
+        <span class="count-badge" id="buyerCount">0 wallets</span>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="buyerSearch" placeholder="Filter by wallet..." oninput="applyBuyerFilter()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Wallet</th>
+              <th>Total BTN Bought</th>
+              <th>Total USDT Spent</th>
+              <th>Avg Price</th>
+              <th>Transactions</th>
+              <th>First Buy</th>
+              <th>Last Buy</th>
+            </tr>
+          </thead>
+          <tbody id="buyerBody">
+            <tr><td colspan="8"><div class="empty-state"><div class="icon">⬡</div>No data yet</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────
+const SUBGRAPH_ID = 'HNCFA9TyBqpo5qpe6QreQABAA1kV8g46mhkCcicu6v2R';
+
+// ─── State ────────────────────────────────────────────────
+let allSwaps   = [];
+let buyerMap   = {};
+let curFilter  = 'all';
+let searchTerm = '';
+
+// ─── Helpers ──────────────────────────────────────────────
+function setStatus(msg, loading = false) {
+  const bar = document.getElementById('statusBar');
+  bar.innerHTML = loading
+    ? `<div class="spinner"></div><span>${msg}</span>`
+    : `<span>${msg}</span>`;
+}
+function setProgress(p) {
+  document.getElementById('progressFill').style.width = p + '%';
+}
+function fmtDate(ts) {
+  return new Date(ts * 1000).toISOString().replace('T',' ').slice(0,19);
+}
+function fmtNum(n, dec=4) {
+  return Number(n).toLocaleString('en-US',{maximumFractionDigits:dec});
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ─── Main fetch ───────────────────────────────────────────
+async function fetchAll() {
+  const poolId  = document.getElementById('poolId').value.trim().toLowerCase();
+  const apiKey  = document.getElementById('apiKey').value.trim();
+  const fromTs  = Math.floor(new Date(document.getElementById('fromDate').value + 'T00:00:00Z').getTime()/1000);
+
+  if (!poolId || !apiKey) { alert('Please fill all fields.'); return; }
+
+  document.getElementById('fetchBtn').disabled = true;
+  allSwaps = []; buyerMap = {};
+  renderSwaps([]); renderBuyers([]);
+  document.getElementById('statsRow').style.display = 'none';
+  setProgress(5);
+
+  const endpoint = `https://gateway.thegraph.com/api/${apiKey}/subgraphs/id/${SUBGRAPH_ID}`;
+
+  try {
+    setStatus('Querying The Graph — Uniswap V4 Base subgraph...', true);
+
+    // Paginate through all swaps for this pool since fromTs
+    let page = 0;
+    const pageSize = 1000;
+    let lastId = '';
+
+    while (true) {
+      setStatus(`Fetching swaps... ${allSwaps.length} loaded so far`, true);
+      setProgress(10 + Math.min(70, allSwaps.length / 50));
+
+      const query = buildQuery(poolId, fromTs, pageSize, lastId);
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+      const json = await res.json();
+
+      if (json.errors) {
+        console.error('GraphQL errors:', json.errors);
+        // Try alternative query if first schema doesn't match
+        const altResult = await tryAlternativeQuery(endpoint, poolId, fromTs, pageSize, lastId);
+        if (altResult === null) throw new Error('GraphQL error: ' + JSON.stringify(json.errors[0]));
+        if (altResult.length === 0) break;
+        allSwaps = allSwaps.concat(altResult);
+        if (altResult.length < pageSize) break;
+        lastId = altResult[altResult.length - 1].id;
+        await sleep(200);
+        continue;
+      }
+
+      const swaps = extractSwaps(json);
+      if (!swaps || swaps.length === 0) break;
+
+      allSwaps = allSwaps.concat(swaps);
+      if (swaps.length < pageSize) break;
+      lastId = swaps[swaps.length - 1].id;
+      page++;
+      await sleep(150);
+    }
+
+    setProgress(85);
+
+    if (allSwaps.length === 0) {
+      setStatus('No swaps found for this pool from the selected date. The subgraph may still be indexing, or the pool has no activity yet.');
+    } else {
+      allSwaps.sort((a,b) => a.ts - b.ts);
+      buildBuyerMap();
+      updateStats();
+      document.getElementById('statsRow').style.display = 'grid';
+      ['exportAll','exportBuys','exportUniq'].forEach(id => document.getElementById(id).disabled = false);
+      setStatus(`Loaded ${allSwaps.length} swaps from ${new Date(fromTs*1000).toDateString()} onwards.`);
+    }
+
+    applyFilter();
+    applyBuyerFilter();
+    setProgress(100);
+    setTimeout(() => setProgress(0), 800);
+
+  } catch(e) {
+    setStatus('Error: ' + e.message);
+    console.error(e);
+    setProgress(0);
+  }
+
+  document.getElementById('fetchBtn').disabled = false;
+}
+
+// ─── Query builder ────────────────────────────────────────
+function buildQuery(poolId, fromTs, first, lastId) {
+  const afterId = lastId ? `, id_gt: "${lastId}"` : '';
+  // V4 subgraph schema — try 'swaps' entity with pool filter
+  return `{
+    swaps(
+      first: ${first}
+      orderBy: id
+      orderDirection: asc
+      where: {
+        pool: "${poolId}"
+        timestamp_gte: ${fromTs}
+        ${afterId ? 'id_gt: "' + lastId + '"' : ''}
+      }
+    ) {
+      id
+      timestamp
+      origin
+      amount0
+      amount1
+      amountUSD
+      sqrtPriceX96
+      transaction { id }
+    }
+  }`;
+}
+
+async function tryAlternativeQuery(endpoint, poolId, fromTs, first, lastId) {
+  // Try alternative schema with 'sender'/'recipient' fields
+  const afterClause = lastId ? `, id_gt: "${lastId}"` : '';
+  const queries = [
+    // Schema variant 2
+    `{ swaps(first:${first}, orderBy:id, orderDirection:asc, where:{poolId:"${poolId}", timestamp_gte:${fromTs}${afterClause}}) {
+      id timestamp sender recipient amount0 amount1 amountUSD transaction{id}
+    }}`,
+    // Schema variant 3 — broader filter
+    `{ swaps(first:${first}, orderBy:timestamp, orderDirection:asc, where:{timestamp_gte:${fromTs}${afterClause}}) {
+      id timestamp origin amount0 amount1 amountUSD pool{id} transaction{id}
+    }}`,
+  ];
+
+  for (const q of queries) {
+    try {
+      const r = await fetch(endpoint, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({query: q})
+      });
+      const j = await r.json();
+      if (!j.errors && j.data && j.data.swaps) {
+        let swaps = j.data.swaps;
+        // Filter by pool if we queried broadly
+        if (swaps[0] && swaps[0].pool) {
+          swaps = swaps.filter(s => s.pool && s.pool.id && s.pool.id.toLowerCase() === poolId.toLowerCase());
+        }
+        return swaps.map(s => parseSwap(s));
+      }
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+function extractSwaps(json) {
+  if (!json.data) return [];
+  const raw = json.data.swaps || [];
+  return raw.map(s => parseSwap(s));
+}
+
+function parseSwap(s) {
+  const a0 = parseFloat(s.amount0 || 0);
+  const a1 = parseFloat(s.amount1 || 0);
+  // In Uniswap V4: negative amount = tokens leaving pool (user receives)
+  // amount0 < 0 means token0 goes OUT of pool = user buying token0
+  // We assume token0 = BTN (lower address)
+  let type, btnAmt, usdtAmt;
+
+  if (a0 < 0) {
+    type = 'BUY';
+    btnAmt  = Math.abs(a0);
+    usdtAmt = Math.abs(a1);
+  } else if (a0 > 0) {
+    type = 'SELL';
+    btnAmt  = Math.abs(a0);
+    usdtAmt = Math.abs(a1);
+  } else if (a1 < 0) {
+    type = 'BUY';
+    btnAmt  = Math.abs(a1);
+    usdtAmt = Math.abs(a0);
+  } else {
+    type = 'SELL';
+    btnAmt  = Math.abs(a1);
+    usdtAmt = Math.abs(a0);
+  }
+
+  const price = btnAmt > 0 ? usdtAmt / btnAmt : 0;
+  const wallet = (s.origin || s.sender || s.recipient || '').toLowerCase();
+  const txHash = s.transaction ? s.transaction.id : (s.id || '').split('-')[0];
+
+  return {
+    id:     s.id || '',
+    ts:     parseInt(s.timestamp || 0),
+    date:   fmtDate(parseInt(s.timestamp || 0)),
+    type,
+    wallet,
+    btnAmt,
+    usdtAmt,
+    price,
+    txHash
+  };
+}
+
+// ─── Buyer map ────────────────────────────────────────────
+function buildBuyerMap() {
+  buyerMap = {};
+  for (const s of allSwaps) {
+    if (s.type !== 'BUY') continue;
+    if (!buyerMap[s.wallet]) {
+      buyerMap[s.wallet] = { wallet:s.wallet, totalBtn:0, totalUsdt:0, txCount:0, firstDate:s.date, lastDate:s.date };
+    }
+    const b = buyerMap[s.wallet];
+    b.totalBtn   += s.btnAmt;
+    b.totalUsdt  += s.usdtAmt;
+    b.txCount    += 1;
+    b.lastDate    = s.date;
+  }
+}
+
+// ─── Stats ────────────────────────────────────────────────
+function updateStats(filteredRows) {
+  const source = filteredRows || allSwaps;
+  const buys   = source.filter(s => s.type==='BUY');
+  const sells  = source.filter(s => s.type==='SELL');
+  // Unique buyers: count distinct wallets from buys in current source
+  const uniqSet = new Set(buys.map(s => s.wallet));
+  const uniq    = filteredRows ? uniqSet.size : Object.keys(buyerMap).length;
+  const totalBtn  = buys.reduce((a,s) => a + s.btnAmt,  0);
+  const totalUsdt = buys.reduce((a,s) => a + s.usdtAmt, 0);
+
+  document.getElementById('stTotal').textContent      = source.length;
+  document.getElementById('stBuys').textContent       = buys.length;
+  document.getElementById('stSells').textContent      = sells.length;
+  document.getElementById('stUniqBuyers').textContent = uniq;
+  document.getElementById('stBtnVol').textContent     = fmtNum(totalBtn, 2) + ' BTN';
+  document.getElementById('stUsdtVol').textContent    = '≈ $' + fmtNum(totalUsdt, 2);
+}
+
+// ─── Filter & render swaps ────────────────────────────────
+function setFilter(f) {
+  curFilter = f;
+  ['All','Buy','Sell'].forEach(x => {
+    const id = 'f' + x;
+    document.getElementById(id).classList.toggle('active', id === 'f' + f.charAt(0).toUpperCase() + f.slice(1));
+  });
+  applyFilter();
+}
+
+function applyFilter() {
+  searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  let rows = allSwaps;
+  if (curFilter === 'buy')  rows = rows.filter(r => r.type==='BUY');
+  if (curFilter === 'sell') rows = rows.filter(r => r.type==='SELL');
+  if (searchTerm) rows = rows.filter(r => r.wallet.includes(searchTerm) || r.txHash.toLowerCase().includes(searchTerm));
+
+  // Update stats cards to reflect current filter/search
+  if (allSwaps.length > 0) {
+    const isFiltered = !!(searchTerm || curFilter !== 'all');
+    updateStats(isFiltered ? rows : null);
+  }
+
+  renderSwaps(rows);
+}
+
+function renderSwaps(rows) {
+  document.getElementById('rowCount').textContent = rows.length + ' rows';
+  const tbody = document.getElementById('tableBody');
+  const tfoot = document.getElementById('tableFoot');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">⬡</div>${allSwaps.length > 0 ? 'No results match your filter' : 'No data — click Fetch Swaps'}</div></td></tr>`;
+    tfoot.innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = rows.map((r,i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td>${r.date}</td>
+      <td><span class="badge badge-${r.type.toLowerCase()}">${r.type}</span></td>
+      <td><a class="wallet-link" href="https://basescan.org/address/${r.wallet}" target="_blank">${r.wallet.slice(0,6)}…${r.wallet.slice(-4)}</a></td>
+      <td class="${r.type==='BUY'?'green':'red'}">${fmtNum(r.btnAmt)} BTN</td>
+      <td>${fmtNum(r.usdtAmt,2)} USDT</td>
+      <td style="color:var(--muted)">$${fmtNum(r.price,4)}</td>
+      <td><a class="tx-link" href="https://basescan.org/tx/${r.txHash}" target="_blank">${r.txHash.slice(0,10)}…</a></td>
+    </tr>
+  `).join('');
+
+  // Totals footer
+  const totalBtn  = rows.reduce((a,r) => a + r.btnAmt,  0);
+  const totalUsdt = rows.reduce((a,r) => a + r.usdtAmt, 0);
+  tfoot.innerHTML = `
+    <tr style="background:var(--surface2); border-top:2px solid var(--border)">
+      <td colspan="4" style="font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; padding:10px 14px;">
+        Totals (${rows.length} rows)
+      </td>
+      <td style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent2); padding:10px 14px;">
+        ${fmtNum(totalBtn, 2)} BTN
+      </td>
+      <td style="font-family:var(--mono); font-size:12px; font-weight:700; color:var(--accent2); padding:10px 14px;">
+        ${fmtNum(totalUsdt, 2)} USDT
+      </td>
+      <td colspan="2"></td>
+    </tr>`;
+}
+
+// ─── Buyer table ──────────────────────────────────────────
+function applyBuyerFilter() {
+  const q = document.getElementById('buyerSearch').value.trim().toLowerCase();
+  let rows = Object.values(buyerMap).sort((a,b) => b.totalBtn - a.totalBtn);
+  if (q) rows = rows.filter(r => r.wallet.includes(q));
+  renderBuyers(rows);
+}
+
+function renderBuyers(rows) {
+  document.getElementById('buyerCount').textContent = rows.length + ' wallets';
+  const tbody = document.getElementById('buyerBody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">⬡</div>No buyers found</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((r,i) => {
+    const avg = r.totalBtn > 0 ? r.totalUsdt / r.totalBtn : 0;
+    return `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><a class="wallet-link" href="https://basescan.org/address/${r.wallet}" target="_blank">${r.wallet.slice(0,6)}…${r.wallet.slice(-4)}</a></td>
+      <td class="green">${fmtNum(r.totalBtn,4)} BTN</td>
+      <td>$${fmtNum(r.totalUsdt,2)}</td>
+      <td style="color:var(--muted)">$${fmtNum(avg,4)}</td>
+      <td>${r.txCount}</td>
+      <td>${r.firstDate}</td>
+      <td>${r.lastDate}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── Tabs ─────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('viewSwaps').style.display  = tab==='swaps'  ? 'block' : 'none';
+  document.getElementById('viewBuyers').style.display = tab==='buyers' ? 'block' : 'none';
+  document.getElementById('tabSwaps').classList.toggle('active',  tab==='swaps');
+  document.getElementById('tabBuyers').classList.toggle('active', tab==='buyers');
+  if (tab==='buyers') applyBuyerFilter();
+}
+
+// ─── Export ───────────────────────────────────────────────
+function exportCSV(type) {
+  let rows = allSwaps;
+  if (type==='buy') rows = rows.filter(r => r.type==='BUY');
+  const header = 'Date,Type,Wallet,BTN Amount,USDT Amount,Price (USDT/BTN),TX Hash\n';
+  const body = rows.map(r =>
+    `${r.date},${r.type},${r.wallet},${r.btnAmt},${r.usdtAmt},${r.price},${r.txHash}`
+  ).join('\n');
+  download(type==='buy' ? 'btn_buyers_all_txs.csv' : 'btn_all_swaps.csv', header+body);
+}
+
+function exportUniqueBuyers() {
+  const rows = Object.values(buyerMap).sort((a,b) => b.totalBtn - a.totalBtn);
+  const header = 'Wallet,Total BTN Bought,Total USDT Spent,Avg Price,Transactions,First Buy,Last Buy\n';
+  const body = rows.map(r => {
+    const avg = r.totalBtn > 0 ? (r.totalUsdt/r.totalBtn).toFixed(4) : 0;
+    return `${r.wallet},${r.totalBtn.toFixed(4)},${r.totalUsdt.toFixed(2)},${avg},${r.txCount},${r.firstDate},${r.lastDate}`;
+  }).join('\n');
+  download('btn_unique_buyers.csv', header+body);
+}
+
+function download(filename, text) {
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(text);
+  a.download = filename;
+  a.click();
+}
+</script>
+</body>
+</html>
