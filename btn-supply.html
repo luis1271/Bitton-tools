@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BTN Supply — Live</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #EEF1F5;
+    --surface: #FFFFFF;
+    --ink: #16233A;
+    --muted: #5B6B82;
+    --line: #D5DCE6;
+    --treasury: #2F4B8A;
+    --webapp: #7FA0CB;
+    --outside: #D9962B;
+    --error: #B3261E;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1726;
+      --surface: #172238;
+      --ink: #E8EDF5;
+      --muted: #9AA9BF;
+      --line: #2A3852;
+      --treasury: #5B7FD1;
+      --webapp: #A9C1E2;
+      --outside: #F0B04A;
+      --error: #F2877F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1726; --surface: #172238; --ink: #E8EDF5; --muted: #9AA9BF;
+    --line: #2A3852; --treasury: #5B7FD1; --webapp: #A9C1E2; --outside: #F0B04A; --error: #F2877F;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 20px 56px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+  h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 6px; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { margin: 0; color: var(--muted); max-width: 52ch; }
+  .status { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: .875rem; }
+  button {
+    font: inherit; font-size: .875rem; font-weight: 600;
+    color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--treasury); outline-offset: 2px; }
+  button:disabled { opacity: .6; cursor: wait; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+
+  .total { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .total .label { color: var(--muted); }
+  .total .value { font-size: 1.5rem; font-weight: 700; }
+
+  .bar { display: flex; height: 44px; border-radius: 8px; overflow: hidden; background: var(--line); }
+  .seg { height: 100%; transition: width .8s cubic-bezier(.2,.7,.2,1); width: 0; }
+  .seg.treasury { background: var(--treasury); }
+  .seg.webapp { background: var(--webapp); }
+  .seg.outside { background: var(--outside); }
+  @media (prefers-reduced-motion: reduce) { .seg { transition: none; } }
+
+  .rows { margin-top: 20px; }
+  .row {
+    display: grid; grid-template-columns: 14px 1fr auto; gap: 4px 12px;
+    align-items: baseline; padding: 14px 0; border-top: 1px solid var(--line);
+  }
+  .row:first-child { border-top: 0; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; align-self: center; }
+  .name { font-weight: 600; }
+  .desc { grid-column: 2 / 3; color: var(--muted); font-size: .875rem; }
+  .desc a { color: inherit; }
+  .amount { text-align: right; font-weight: 600; white-space: nowrap; }
+  .pct { grid-column: 3 / 4; text-align: right; color: var(--muted); font-size: .875rem; }
+
+  h2 { font-size: 1.25rem; margin: 36px 0 12px; font-weight: 700; }
+  .outside-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .figure .caption { color: var(--muted); font-size: .9375rem; margin: 0 0 8px; }
+  .figure .big { font-size: 1.625rem; font-weight: 700; line-height: 1.2; }
+  .figure .big small { font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .figure .share { margin-top: 4px; font-weight: 600; color: var(--outside); }
+  .figure.main { border-color: var(--outside); border-width: 2px; }
+
+  .notes { margin-top: 36px; color: var(--muted); font-size: .9375rem; }
+  .notes p { margin: 0 0 12px; max-width: 70ch; }
+  .notes strong { color: var(--ink); font-weight: 600; }
+
+  .error {
+    display: none; margin-bottom: 20px; padding: 14px 16px; border-radius: 10px;
+    border: 1px solid var(--error); color: var(--error); background: var(--surface);
+  }
+  .error.show { display: block; }
+  .skeleton { color: transparent; background: var(--line); border-radius: 4px; }
+
+  footer { margin-top: 32px; font-size: .8125rem; color: var(--muted); }
+  footer a { color: inherit; }
+
+  @media (max-width: 520px) {
+    main { padding-top: 28px; }
+    h1 { font-size: 1.625rem; }
+    .panel { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>BTN supply</h1>
+      <p class="sub">Live balances read directly from the Base blockchain, showing how the 21,000,000 BTN total supply is distributed.</p>
+    </div>
+    <div class="status">
+      <span id="updated">Loading…</span>
+      <button id="refresh" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <div class="error" id="error" role="alert"></div>
+
+  <section class="panel" aria-label="Supply distribution">
+    <div class="total">
+      <span class="label">Total supply</span>
+      <span class="value">21,000,000.00 BTN</span>
+    </div>
+    <div class="bar" role="img" id="bar" aria-label="Supply distribution bar">
+      <div class="seg treasury" id="seg-treasury"></div>
+      <div class="seg webapp" id="seg-webapp"></div>
+      <div class="seg outside" id="seg-outside"></div>
+    </div>
+
+    <div class="rows">
+      <div class="row">
+        <span class="dot" style="background:var(--treasury)"></span>
+        <span class="name">Listing Treasury Wallet</span>
+        <span class="amount" id="amt-treasury"><span class="skeleton">00,000,000.00 BTN</span></span>
+        <span class="desc">AI-managed reserve · <span id="links-treasury"></span></span>
+        <span class="pct" id="pct-treasury">–</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--webapp)"></span>
+        <span class="name">WebApp Wallet System</span>
+        <span class="amount" id="amt-webapp"><span class="skeleton">0,000,000.00 BTN</span></span>
+        <span class="desc">Mostly reserves · <span id="links-webapp"></span></span>
+        <span class="pct" id="pct-webapp">–</span>
+      </div>
+      <div class="row">
+        <span class="dot" style="background:var(--outside)"></span>
+        <span class="name">Outside both system wallets</span>
+        <span class="amount" id="amt-outside"><span class="skeleton">0,000,000.00 BTN</span></span>
+        <span class="desc" id="holders-desc">Vesting and staking contracts, liquidity pools and other addresses</span>
+        <span class="pct" id="pct-outside">–</span>
+      </div>
+    </div>
+  </section>
+
+  <h2>How much BTN is outside the system wallets</h2>
+  <div class="outside-grid">
+    <div class="panel figure">
+      <p class="caption">Excluding only the Listing Treasury</p>
+      <div class="big" id="fig-ex-treasury">–</div>
+      <div class="share" id="fig-ex-treasury-pct">–</div>
+    </div>
+    <div class="panel figure main">
+      <p class="caption">Excluding both the Listing Treasury and the WebApp Wallet System</p>
+      <div class="big" id="fig-ex-both">–</div>
+      <div class="share" id="fig-ex-both-pct">–</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <p><strong>Not all of it is available for sale.</strong> The BTN outside these wallets includes tokens held in vesting and staking contracts, liquidity pools and other addresses. None of these figures should be confused with the amount currently offered for sale.</p>
+    <p><strong>The supply can never increase.</strong> The keys of the initial token generation smart contract were burned by sending them to a zero address. There will never be more than 21 million BTN — it is technically not possible.</p>
+  </div>
+
+  <footer>
+    BTN contract on Base: <a id="link-token" target="_blank" rel="noopener"></a><br>
+    Data source: balances read directly from the Base blockchain; holder count from Blockscout. Figures refresh automatically every 5 minutes.
+  </footer>
+</main>
+
+<script>
+(function () {
+  const TOKEN    = '0x6C417845fACc97ebCE84FBfEE9A7460b0E5cfCf3';
+  // Paste every address that belongs to each group (one or several).
+  const TREASURY = ['0x121128fa818Ab06c6317CBA2A32852197d59537F'];
+  const WEBAPP   = ['0x62C50A2e45185Cc758d0523E273E4419aC9d6673'];
+  const TOTAL    = 21000000;
+  const DECIMALS = 6;
+  const API      = 'https://base.blockscout.com/api';
+  const SCAN     = 'https://basescan.org';
+  const REFRESH_MS = 5 * 60 * 1000;
+
+  const $ = (id) => document.getElementById(id);
+  const fmt = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (v) => ((v / TOTAL) * 100).toFixed(2) + '%';
+
+  function renderLinks(id, list) {
+    const el = $(id);
+    el.innerHTML = list.map((a, i) =>
+      `<a href="${SCAN}/token/${TOKEN}?a=${a}" target="_blank" rel="noopener">${list.length > 1 ? 'Wallet ' + (i + 1) : 'View on BaseScan'}</a>`
+    ).join(', ');
+  }
+  renderLinks('links-treasury', TREASURY);
+  renderLinks('links-webapp', WEBAPP);
+  $('link-token').href    = `${SCAN}/token/${TOKEN}`;
+  $('link-token').textContent = TOKEN;
+
+  // Reads balanceOf directly from the blockchain (no indexer), with fallbacks.
+  const RPCS = [
+    'https://mainnet.base.org',
+    'https://base-rpc.publicnode.com',
+    'https://base.llamarpc.com'
+  ];
+
+  async function rpcBalance(address) {
+    const data = '0x70a08231' + address.toLowerCase().replace('0x', '').padStart(64, '0');
+    let lastErr;
+    for (const url of RPCS) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: TOKEN, data }, 'latest'] })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        if (json.error || !json.result) throw new Error(json.error ? json.error.message : 'Empty result');
+        return BigInt(json.result === '0x' ? 0 : json.result);
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
+
+  async function blockscoutBalance(address) {
+    const url = `${API}?module=account&action=tokenbalance&contractaddress=${TOKEN}&address=${address}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.status !== '1') throw new Error(data.message || 'Unexpected response');
+    return BigInt(data.result);
+  }
+
+  async function getBalance(address) {
+    let raw;
+    try { raw = await rpcBalance(address); }
+    catch (e) { raw = await blockscoutBalance(address); }
+    return Number(raw) / 10 ** DECIMALS;
+  }
+
+  async function getGroup(list) {
+    const values = await Promise.all(list.map(getBalance));
+    return values.reduce((a, b) => a + b, 0);
+  }
+
+  async function getHolders() {
+    try {
+      const res = await fetch(`${API}/v2/tokens/${TOKEN}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return Number(data.holders_count ?? data.holders) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function load() {
+    const btn = $('refresh');
+    btn.disabled = true;
+    $('error').classList.remove('show');
+    try {
+      const [treasury, webapp, holders] = await Promise.all([
+        getGroup(TREASURY), getGroup(WEBAPP), getHolders()
+      ]);
+      const outsideTreasury = TOTAL - treasury;
+      const outsideBoth = TOTAL - treasury - webapp;
+
+      $('amt-treasury').textContent = fmt(treasury) + ' BTN';
+      $('amt-webapp').textContent   = fmt(webapp) + ' BTN';
+      $('amt-outside').textContent  = fmt(outsideBoth) + ' BTN';
+      $('pct-treasury').textContent = pct(treasury);
+      $('pct-webapp').textContent   = pct(webapp);
+      $('pct-outside').textContent  = pct(outsideBoth);
+
+      $('seg-treasury').style.width = (treasury / TOTAL * 100) + '%';
+      $('seg-webapp').style.width   = (webapp / TOTAL * 100) + '%';
+      $('seg-outside').style.width  = (outsideBoth / TOTAL * 100) + '%';
+      $('bar').setAttribute('aria-label',
+        `Listing Treasury ${pct(treasury)}, WebApp Wallet System ${pct(webapp)}, outside both ${pct(outsideBoth)}`);
+
+      $('fig-ex-treasury').innerHTML = `${fmt(outsideTreasury)} <small>BTN</small>`;
+      $('fig-ex-treasury-pct').textContent = pct(outsideTreasury) + ' of total supply';
+      $('fig-ex-both').innerHTML = `${fmt(outsideBoth)} <small>BTN</small>`;
+      $('fig-ex-both-pct').textContent = pct(outsideBoth) + ' of total supply';
+
+      if (holders) {
+        $('holders-desc').textContent =
+          `Spread across ${holders.toLocaleString('en-US')} holder addresses, including vesting and staking contracts and liquidity pools`;
+      }
+
+      const now = new Date();
+      $('updated').textContent = 'Updated ' + now.toLocaleString('en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) {
+      $('error').textContent = 'The live balances could not be loaded from the blockchain right now. Press Refresh to try again, or check the wallets directly on BaseScan using the links below.';
+      $('error').classList.add('show');
+      $('updated').textContent = 'Not updated';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  $('refresh').addEventListener('click', load);
+  load();
+  setInterval(load, REFRESH_MS);
+})();
+</script>
+</body>
+</html>
