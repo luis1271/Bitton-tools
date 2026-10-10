@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rewards Migration Calculator</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f7fb;color:#1f2937}
+.container{max-width:920px;margin:40px auto;padding:20px}
+.card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 8px 28px rgba(0,0,0,.08);margin-bottom:20px}
+h1{margin-top:0;font-size:30px;color:#111827}
+h2{font-size:21px;margin-top:28px}
+p{line-height:1.6}
+label{display:block;font-weight:700;margin-bottom:8px}
+input,select{width:100%;padding:13px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;margin-bottom:18px}
+button{width:100%;border:0;padding:14px 18px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;background:#2563eb;color:#fff}
+button:hover{background:#1d4ed8}
+.results{display:none;margin-top:24px}
+.result-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:12px 0}
+.result-label{font-size:14px;color:#64748b;margin-bottom:4px}
+.result-value{font-size:24px;font-weight:700;color:#111827}
+.formula{background:#eff6ff;border-left:4px solid #2563eb;padding:12px 14px;margin:12px 0;border-radius:8px;font-family:Consolas,monospace;overflow-wrap:anywhere}
+.warning{background:#fff7ed;border-left:4px solid #f97316;padding:14px;border-radius:8px;margin-top:18px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.summary{margin-top:20px;border-top:1px solid #e5e7eb;padding-top:18px}
+.small{font-size:14px;color:#64748b}
+.export-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.export-actions button{width:auto;flex:1 1 180px}
+.secondary{background:#475569}
+.secondary:hover{background:#334155}
+.success-msg{margin-top:10px;font-size:14px;color:#166534;font-weight:700}
+@media(max-width:700px){.container{margin:10px auto}.card{padding:20px}.grid{grid-template-columns:1fr}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>Rewards Migration Calculator</h1>
+    <p>Enter the user's Rewards Balance and select the applicable migration scenario. The calculator shows each step of the migration logic.</p>
+
+    <label for="migrationType">Migration Status</label>
+    <select id="migrationType">
+      <option value="never">User has never completed a migration</option>
+      <option value="already">User already migrated to the WebApp and has migrated staking positions</option>
+    </select>
+
+    <label for="rewards">Rewards Balance</label>
+    <input id="rewards" type="number" min="0" step="0.000001" placeholder="Example: 1000">
+
+    <button onclick="calculate()">Calculate Migration</button>
+
+    <div class="results" id="results"></div>
+  </div>
+
+  <div class="card">
+    <h2>Important Migration Rules</h2>
+    <p><strong>Important:</strong> The <strong>70% migration allocation must be calculated first</strong>. The 5.0625 compression factor is then applied to that 70% allocation.</p>
+    <p><strong>Compression formula:</strong> Compressed Migration Amount = 70% Migration Allocation ÷ 5.0625</p>
+    <p><strong>Users who never migrated:</strong> calculate 70% of the full Rewards Balance first, then compress that 70% using the 5.0625 factor.</p>
+    <p><strong>Users who already migrated:</strong> first calculate and remove the deposit that generated this specific portion of the Rewards Balance. Then calculate 70% of the Rewards Excluding the Deposit and apply the 5.0625 compression factor to that 70% allocation.</p>
+
+    <div class="warning">
+      <strong>Important:</strong> For users who already migrated, do not use all deposits ever made by the user. Only the deposit amount that generated this specific portion of the Rewards Balance should be considered.
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = n => Number(n).toLocaleString("en-US",{
+  minimumFractionDigits:2,
+  maximumFractionDigits:6
+});
+
+let exportText = "";
+
+function buildExportText(data){
+  const lines = [];
+  lines.push("REWARDS MIGRATION CALCULATION");
+  lines.push("");
+  lines.push(`Migration Status: ${data.status}`);
+  lines.push(`Rewards Balance: ${fmt(data.rewards)} BTN`);
+  lines.push("");
+
+  if(data.alreadyMigrated){
+    lines.push("Step 1 - Calculate the amount of deposit that generated these rewards");
+    lines.push(`Amount of Deposit = ${fmt(data.rewards)} / 320.5% = ${fmt(data.deposit)} BTN`);
+    lines.push("");
+    lines.push("Step 2 - Exclude the deposit from the rewards");
+    lines.push(`Rewards Excluding the Deposit = ${fmt(data.rewards)} - ${fmt(data.deposit)} = ${fmt(data.applicableRewards)} BTN`);
+    lines.push("");
+  }
+
+  lines.push(`Step ${data.allocationStep} - Calculate the 70% migration allocation`);
+  lines.push("Why 70%? The applicable rewards amount is divided into 70% for migration, 10% for Vesting, and 20% for Fees & Development.");
+  lines.push(`70% Migration Allocation = ${fmt(data.applicableRewards)} x 70% = ${fmt(data.migration70)} BTN`);
+  lines.push("");
+  lines.push(`Step ${data.compressionStep} - Apply the 5.0625 compression factor`);
+  lines.push(`Compressed Migration Amount = ${fmt(data.migration70)} / 5.0625 = ${fmt(data.compressedMigration)} BTN`);
+  lines.push("");
+  lines.push(`Step ${data.splitStep} - Split the compressed migration amount`);
+  lines.push(`Max 360 Staking = ${fmt(data.compressedMigration)} x 30% = ${fmt(data.max360)} BTN`);
+  lines.push(`Validator Pool = ${fmt(data.compressedMigration)} x 70% = ${fmt(data.validatorPool)} BTN`);
+  lines.push("");
+  lines.push(`Vesting = ${fmt(data.applicableRewards)} x 10% = ${fmt(data.vesting)} BTN`);
+  lines.push(`Fees & Development = ${fmt(data.applicableRewards)} x 20% = ${fmt(data.feesDevelopment)} BTN - NOT MIGRATABLE`);
+  lines.push("");
+  lines.push(`Total Migrated to Max 360 + Validator Pool = ${fmt(data.max360 + data.validatorPool)} BTN`);
+  lines.push(`Vesting Allocation = ${fmt(data.vesting)} BTN`);
+  lines.push(`Fees & Development = ${fmt(data.feesDevelopment)} BTN - NOT MIGRATABLE`);
+  return lines.join("\n");
+}
+
+function copyResults(){
+  if(!exportText) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(exportText).then(()=>{
+      document.getElementById("exportMsg").textContent = "Calculation copied.";
+    }).catch(()=>fallbackCopy());
+  } else {
+    fallbackCopy();
+  }
+}
+
+function fallbackCopy(){
+  const ta = document.createElement("textarea");
+  ta.value = exportText;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
+  document.getElementById("exportMsg").textContent = "Calculation copied.";
+}
+
+function downloadResults(){
+  if(!exportText) return;
+  const blob = new Blob([exportText], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "rewards_migration_calculation.txt";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  document.getElementById("exportMsg").textContent = "TXT file exported.";
+}
+
+function printResults(){
+  if(!exportText) return;
+  window.print();
+}
+
+function calculate(){
+  const rewards = parseFloat(document.getElementById("rewards").value);
+  const type = document.getElementById("migrationType").value;
+  const results = document.getElementById("results");
+
+  if(isNaN(rewards) || rewards < 0){
+    results.style.display="block";
+    results.innerHTML='<div class="warning"><strong>Please enter a valid Rewards Balance.</strong></div>';
+    exportText = "";
+    return;
+  }
+
+  const alreadyMigrated = type === "already";
+  let applicableRewards = rewards;
+  let deposit = 0;
+  let resultHtml = "";
+
+  if(alreadyMigrated){
+    deposit = rewards / 3.205;
+    applicableRewards = rewards - deposit;
+
+    resultHtml += `
+      <h2>Step 1 — Calculate the amount of deposit that generated these rewards</h2>
+      <div class="formula">
+        Amount of Deposit That Generated the Rewards = Rewards Balance ÷ 320.5%<br>
+        ${fmt(rewards)} ÷ 3.205 = <strong>${fmt(deposit)}</strong>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Amount of Deposit That Generated the Rewards</div>
+        <div class="result-value">${fmt(deposit)}</div>
+      </div>
+
+      <h2>Step 2 — Exclude the deposit from the rewards</h2>
+      <div class="formula">
+        Rewards Excluding the Deposit = Rewards Balance − Amount of Deposit<br>
+        ${fmt(rewards)} − ${fmt(deposit)} = <strong>${fmt(applicableRewards)}</strong>
+      </div>
+      <div class="result-box">
+        <div class="result-label">Rewards Excluding the Deposit</div>
+        <div class="result-value">${fmt(applicableRewards)}</div>
+      </div>
+
+    `;
+  }
+
+  const allocationStep = alreadyMigrated ? 3 : 1;
+  const compressionStep = alreadyMigrated ? 4 : 2;
+  const splitStep = alreadyMigrated ? 5 : 3;
+
+  const migration70 = applicableRewards * 0.70;
+  const compressedMigration = migration70 / 5.0625;
+  const max360 = compressedMigration * 0.30;
+  const validatorPool = compressedMigration * 0.70;
+  const vesting = applicableRewards * 0.10;
+  const feesDevelopment = applicableRewards * 0.20;
+
+  resultHtml += `
+    <h2>Step ${allocationStep} — Calculate the 70% migration allocation</h2>
+    <p>
+      <strong>Why 70%?</strong> Remember how withdrawals worked in the Telegram Mini App: every time you withdrew your rewards, the amount was divided into three parts. Only <strong>70%</strong> was sent to your wallet, <strong>10%</strong> went to <strong>Vesting</strong>, and <strong>20%</strong> went to <strong>Fees &amp; Development</strong>.
+      <br><br>
+      For example, if you withdrew <strong>100 BTN</strong>, you received <strong>70 BTN</strong> in your wallet, <strong>10 BTN</strong> went to Vesting, and <strong>20 BTN</strong> went to Fees &amp; Development.
+      <br><br>
+      Your Rewards Balance is migrated with exactly the same split: <strong>70%</strong> goes to the migration process (<strong>Max 360 Staking + Validator Pool</strong>), <strong>10%</strong> goes to Vesting, and <strong>20%</strong> goes to Fees &amp; Development. Just as you never received that 20% in your wallet when you withdrew, the Fees &amp; Development portion is <strong style="color:#dc2626;">NOT MIGRATABLE</strong>.
+    </p>
+
+    <div class="formula">
+      70% Migration Allocation = ${fmt(applicableRewards)} × 70% = <strong>${fmt(migration70)}</strong>
+    </div>
+
+    <div class="result-box">
+      <div class="result-label">70% Migration Allocation</div>
+      <div class="result-value">${fmt(migration70)}</div>
+    </div>
+
+    <h2>Step ${compressionStep} — Apply the 5.0625 compression factor</h2>
+    <p>The compression factor is applied to the 70% migration allocation, not to the full applicable rewards amount.</p>
+
+    <div class="formula">
+      Compressed Migration Amount = 70% Migration Allocation ÷ 5.0625<br>
+      ${fmt(migration70)} ÷ 5.0625 = <strong>${fmt(compressedMigration)}</strong>
+    </div>
+
+    <div class="result-box">
+      <div class="result-label">Compressed Migration Amount</div>
+      <div class="result-value">${fmt(compressedMigration)}</div>
+    </div>
+
+    <h2>Step ${splitStep} — Split the compressed migration amount</h2>
+
+    <div class="formula">
+      Max 360 Staking = ${fmt(compressedMigration)} × 30% = <strong>${fmt(max360)}</strong>
+    </div>
+
+    <div class="formula">
+      Validator Pool = ${fmt(compressedMigration)} × 70% = <strong>${fmt(validatorPool)}</strong>
+    </div>
+
+    <div class="formula">
+      Vesting = ${fmt(applicableRewards)} × 10% = <strong>${fmt(vesting)}</strong>
+    </div>
+
+    <div class="formula">
+      Fees & Development = ${fmt(applicableRewards)} × 20% = <strong>${fmt(feesDevelopment)}</strong>
+      <strong style="color:#dc2626; margin-left:10px;">NOT MIGRATABLE</strong>
+    </div>
+
+    <div class="summary">
+      <h2>Final Distribution</h2>
+      <div class="grid">
+        <div class="result-box">
+          <div class="result-label">Max 360 Staking</div>
+          <div class="result-value">${fmt(max360)}</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">Validator Pool</div>
+          <div class="result-value">${fmt(validatorPool)}</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">Vesting</div>
+          <div class="result-value">${fmt(vesting)}</div>
+        </div>
+        <div class="result-box">
+          <div class="result-label">Fees & Development — <strong style="color:#dc2626;">NOT MIGRATABLE</strong></div>
+          <div class="result-value">${fmt(feesDevelopment)}</div>
+        </div>
+      </div>
+
+      <div class="export-actions">
+        <button type="button" id="copyBtn" class="secondary">Copy Calculation</button>
+        <button type="button" id="downloadBtn">Export as TXT</button>
+        <button type="button" id="printBtn" class="secondary">Print / Save as PDF</button>
+      </div>
+      <div id="exportMsg" class="success-msg" aria-live="polite"></div>
+
+      <p class="small">
+        Calculation order: determine the applicable rewards amount → calculate the 70% migration allocation → apply the 5.0625 compression factor → split the compressed amount 30% to Max 360 and 70% to the Validator Pool.
+      </p>
+    </div>
+  `;
+
+  results.style.display="block";
+  results.innerHTML=resultHtml;
+
+  const data = {
+    status: alreadyMigrated ? "Already migrated part of staking" : "Never migrated before",
+    rewards, alreadyMigrated, deposit, applicableRewards, allocationStep, compressionStep, splitStep,
+    migration70, compressedMigration, max360, validatorPool, vesting, feesDevelopment
+  };
+  exportText = buildExportText(data);
+
+  document.getElementById("copyBtn").addEventListener("click", copyResults);
+  document.getElementById("downloadBtn").addEventListener("click", downloadResults);
+  document.getElementById("printBtn").addEventListener("click", printResults);
+}
+</script>
+</body>
+</html>
