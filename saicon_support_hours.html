@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAiCoN Support — Working Hours</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#08111f;color:#f8fafc}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0,#173257 0,transparent 65%),#08111f;display:grid;place-items:center;padding:25px}.card{width:min(100%,600px);border:1px solid #2b405e;border-radius:24px;background:#0d1b2e;box-shadow:0 24px 70px #0005;overflow:hidden}.top{padding:32px 32px 24px;border-bottom:1px solid #293b53}.eyebrow{font-size:12px;text-transform:uppercase;color:#73b8ff;font-weight:800;letter-spacing:.18em}.title{font-size:31px;line-height:1.1;margin:12px 0}.subtitle{color:#a7b6ce;line-height:1.5;margin:0}.body{padding:28px 32px 32px}.status{display:inline-flex;align-items:center;gap:9px;border-radius:999px;padding:9px 14px;background:#293b53;color:#d1deef;font-weight:750;font-size:14px}.dot{width:9px;height:9px;border-radius:50%;background:currentColor}.status.open{color:#86efac;background:#143c30}.status.closed{color:#fbbf84;background:#453024}.label{font-size:12px;letter-spacing:.12em;color:#8ba3c2;text-transform:uppercase;font-weight:750;margin-top:30px}.time{font-size:clamp(28px,6vw,42px);font-weight:850;letter-spacing:-.04em;margin:8px 0}.days{font-size:16px;font-weight:650}.hint{color:#a7b6ce;font-size:14px;line-height:1.6}.rule{height:1px;background:#273951;margin:26px 0}.tz{padding:14px 16px;border-radius:12px;background:#13273f;border:1px solid #29445f}.tz strong{display:block;font-size:15px}.tz small{color:#a7b6ce}.note{font-size:13px;color:#94a9c4;margin:16px 0 0;line-height:1.5}.footer{text-align:center;font-size:12px;color:#7186a4;margin-top:22px}.clock{font-variant-numeric:tabular-nums}
+@media(max-width:520px){.top{padding:26px 22px 22px}.body{padding:24px 22px}.title{font-size:27px}}
+</style>
+</head>
+<body>
+<div class="card" role="main">
+  <div class="top"><div class="eyebrow">SAiCoN • Customer Support</div><h1 class="title">Support Working Hours</h1><p class="subtitle">See our working hours automatically converted to your local time zone.</p></div>
+  <div class="body">
+    <div id="status" class="status"><span class="dot"></span><span id="statusText">Checking availability…</span></div>
+    <div class="label">Your local time</div><div class="time clock" id="localClock">—</div><div class="hint" id="localZone">Detecting your time zone…</div>
+    <div class="label">Today's support window in your local time</div><div class="time" id="localHours">—</div><div class="hint" id="localDay">—</div>
+    <div class="rule"></div>
+    <div class="tz"><strong>Official support schedule</strong><div class="days" style="margin:8px 0">Monday – Saturday · 8:00 AM – 7:00 PM</div><small>New York time (ET) • Sundays closed</small></div>
+    <p class="note">Your local schedule may cross midnight or shift to another calendar day. Times update automatically for daylight saving time changes. Status is based on the official New York schedule.</p>
+    <div class="footer">SAiCoN Support • Global time-zone friendly</div>
+  </div>
+</div>
+<script>
+(function(){
+  const zone='America/New_York';
+  const localZone=Intl.DateTimeFormat().resolvedOptions().timeZone||'Your device time zone';
+  const el=id=>document.getElementById(id);
+  const nyParts=date=>Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(date).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+  const nyOffset=date=>{let p=nyParts(date);let asUTC=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);return(asUTC-Math.floor(date.getTime()/1000)*1000)/60000};
+  const instantFromNY=(y,m,d,h,min=0)=>{let target=Date.UTC(y,m-1,d,h,min);let t=target;for(let k=0;k<5;k++){let offset=nyOffset(new Date(t));let next=target-offset*60000;if(next===t)break;t=next}return new Date(t)};
+  const pretty=(date)=>new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',hour12:true}).format(date);
+  const fullDate=date=>new Intl.DateTimeFormat('en-US',{weekday:'long',month:'short',day:'numeric'}).format(date);
+  const localDateKey=date=>new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+  function render(){
+    const now=new Date(),p=nyParts(now),weekday=p.weekday;
+    const isOpen=weekday!=='Sun'&&(+p.hour*60+(+p.minute)>=480)&&(+p.hour*60+(+p.minute)<1140);
+    el('status').className='status '+(isOpen?'open':'closed');
+    el('statusText').textContent=isOpen?'Support is open':'Support is currently closed';
+    el('localClock').textContent=new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true}).format(now);
+    el('localZone').textContent=localZone+' · '+fullDate(now);
+    let ref=new Date(Date.UTC(+p.year,+p.month-1,+p.day));
+    if(weekday==='Sun')ref.setUTCDate(ref.getUTCDate()+1);
+    let y=ref.getUTCFullYear(),m=ref.getUTCMonth()+1,d=ref.getUTCDate();
+    const opening=instantFromNY(y,m,d,8),closing=instantFromNY(y,m,d,19);
+    el('localHours').textContent=pretty(opening)+' – '+pretty(closing);
+    const startDay=fullDate(opening),endDay=fullDate(closing);
+    el('localDay').textContent=startDay+(localDateKey(opening)!==localDateKey(closing)?' → '+endDay:'')+(weekday==='Sun'?' · Next working day':'');
+  }
+  render();setInterval(render,1000);
+})();
+</script>
+</body>
+</html>
